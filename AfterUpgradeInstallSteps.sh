@@ -12,3 +12,4 @@ cd ..
 rm -r opkg-upgrade
 opkg-upgrade -f
 opkg install luci-theme-material-old luci-theme-material
+reboot
