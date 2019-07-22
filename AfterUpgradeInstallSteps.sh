@@ -7,7 +7,7 @@ echo -e -n 'untrusted comment: LEDE usign key of Stan Grishin\nRWR//HUXxMwMVnx7f
 opkg update
 git clone git://github.com/tavinus/opkg-upgrade.git
 cd opkg-upgrade
-./opkg-upgrade.sh -i # installs the op kg-upgrade to /usr/sbin/opkg-upgrade
+./opkg-upgrade.sh -i # installs the opkg-upgrade to /usr/sbin/opkg-upgrade
 cd .. 
 rm -r opkg-upgrade
 opkg-upgrade -f
