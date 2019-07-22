@@ -11,5 +11,5 @@ cd opkg-upgrade
 cd .. 
 rm -r opkg-upgrade
 opkg-upgrade -f
-opkg install luci luci-ssl luci-theme-material-old luci-theme-material
+opkg install luci luci-ssl
 service uhttpd restart
