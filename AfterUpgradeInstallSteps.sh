@@ -1,5 +1,5 @@
 opkg update
-opkg install ca-bundle openssl-util ca-certificates libustream-openssl wget git
+opkg install ca-bundle openssl-util ca-certificates wget git
 opkg list-installed | grep -q uclient-fetch || opkg install uclient-fetch
 opkg list-installed | grep -q libustream || opkg install libustream-mbedtls
 echo -e -n 'untrusted comment: LEDE usign key of Stan Grishin\nRWR//HUXxMwMVnx7fESOKO7x8XoW4/dRidJPjt91hAAU2L59mYvHy0Fa\n' > /tmp/stangri-repo.pub && opkg-key add /tmp/stangri-repo.pub
@@ -13,4 +13,3 @@ rm -r opkg-upgrade
 opkg-upgrade -f
 opkg install luci luci-ssl luci-theme-material-old luci-theme-material
 service uhttpd restart
-reboot
