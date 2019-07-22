@@ -8,6 +8,3 @@ filename=$(wget $DOWNLOAD_LINK -nv 2>&1 |cut -d\" -f2)
 cd /tmp;wget $DOWNLOAD_LINK;
 wget $SHA256SUMS
 sha256sum -c sha256sums 2>/dev/null | if grep OK; then sysupgrade -v $filename; else echo "sum is not correct"; fi
-opkg update
-opkg install luci luci-ssl
-service uhttpd restart
