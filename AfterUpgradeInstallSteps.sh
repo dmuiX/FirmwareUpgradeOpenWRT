@@ -2,7 +2,6 @@ opkg update
 opkg install ca-bundle openssl-util ca-certificates wget git
 opkg list-installed | grep -q uclient-fetch || opkg install uclient-fetch
 opkg list-installed | grep -q libustream || opkg install libustream-mbedtls
-
 opkg update
 git clone git://github.com/tavinus/opkg-upgrade.git
 cd opkg-upgrade
