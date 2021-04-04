@@ -8,5 +8,5 @@ opkg update
 opkg install luci luci-ssl luci-compat luci-app-sqm
 wget https://github.com/jerrykuku/luci-app-argon-config/releases/download/v0.8-beta/luci-app-argon-config_0.8-beta_all.ipk
 opkg install luci-app-argon-config_0.8-beta_all.ipk
-rm luci-theme-argon_2.2.5-20200914_all.ipk.* luci-app-argon-config_0.8-beta_all.ipk openwrt-19.[0-9][0-9].[0-9]-ramips-mt7621-xiaomi_mir3g-squashfs-sysupgrade.bin
+rm luci-theme-argon_2.2.5-20200914_all.ipk luci-app-argon-config_0.8-beta_all.ipk openwrt-19.[0-9][0-9].[0-9]-ramips-mt7621-xiaomi_mir3g-squashfs-sysupgrade.bin
 service uhttpd restart
