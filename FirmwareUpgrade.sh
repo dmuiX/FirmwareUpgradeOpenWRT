@@ -1,5 +1,5 @@
 echo installing wget
-opkg install ca-bundles openssl-util ca-certificates wget
+opkg install openssl-util ca-certificates wget
 opkg list-installed | grep -q libustream || opkg install libustream-mbedtls
 echo "enter the downloadlink"
 read DOWNLOAD_LINK
