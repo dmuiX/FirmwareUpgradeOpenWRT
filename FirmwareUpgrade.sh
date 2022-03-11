@@ -5,6 +5,10 @@ echo "enter the downloadlink"
 read DOWNLOAD_LINK
 echo "enter sha256sums file"
 read SHA256SUMS
+echo "create a backup file"
+BACKUPFILENAME=backup-${HOSTNAME}-$(date +%F).tar.gz
+umask go=
+sysupgrade -b /tmp/BACKUPFILENAME
 echo "enter the backup file"
 read BACKUPFILE
 FILENAME=$(wget $DOWNLOAD_LINK -nv 2>&1 |cut -d\" -f2)
