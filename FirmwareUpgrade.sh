@@ -1,6 +1,6 @@
-#!/bin/bash
 echo "installing wget and some other stuff"
-opkg install openssl-util ca-certificates wget
+opkg update
+opkg install openssl-util ca-certificates
 opkg list-installed | grep -q libustream || opkg install libustream-mbedtls
 
 # UBNT_AP: https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin
@@ -20,12 +20,12 @@ read -p "Now copy the backup file to your computer by entering the following com
 
 read -p "Enter the Downloadlink [https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin]: " DOWNLOAD_LINK
 DOWNLOAD_LINK=${DOWNLOAD_LINK:-https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin}
-wget $DOWNLOAD_LINK
+wget --no-check-certificate $DOWNLOAD_LINK
 FILENAME=$(echo $DOWNLOAD_LINK | cut -d/ -f9)
 
 read -p "Enter the link for the sha256sum file [https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums]: " SHA256SUMS_LINK
 SHA256SUMS_LINK=${SHA256SUMS_LINK:-https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums}
 
-wget $SHA256SUMS_LINK
+wget --no-check-certificate $SHA256SUMS_LINK
 SHA256SUMS=$(echo $SHA256SUMS_LINK | cut -d/ -f9)
 sha256sum -c $SHA256SUMS 2>/dev/null | if grep OK; then sysupgrade -T -f $BACKUPFILE $FILENAME 2>&1 > error.log; if [[ $? -eq 0 ]]; then sysupgrade -c -o -v -k -f $BACKUPFILE $FILENAME; else cat error.log; fi; else echo "sum is not correct"; fi
