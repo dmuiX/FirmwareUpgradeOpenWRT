@@ -1,31 +1,23 @@
-echo "installing wget and some other stuff"
 opkg update
-opkg install openssl-util ca-certificates
-opkg list-installed | grep -q libustream || opkg install libustream-mbedtls
-
-# UBNT_AP: https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin
-# https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums
-
-# Mi Router 3G: https://downloads.openwrt.org/releases/21.02.2/targets/ramips/mt7621/openwrt-21.02.2-ramips-mt7621-xiaomi_mi-router-3g-squashfs-sysupgrade.bin
-# https://downloads.openwrt.org/releases/21.02.2/targets/ramips/mt7621/sha256sums
+opkg install luci-compat luci-lib-ipkg
+# opkg list-installed | grep -q uclient-fetch || opkg install uclient-fetch
+# opkg list-installed | grep -q libustream || opkg install libustream-mbedtls
+# luci-app-sqm
 
 cd /tmp
-echo "create a backup file"
-BACKUPFILE=backup-${HOSTNAME}-$(date +%F).tar.gz
-umask go=
-sysupgrade -b $BACKUPFILE
+read -p "Enter the download link of the luci app argon config [https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.2.9/luci-app-argon-config_0.9-20210309_all.ipk]"
+LUCI_APP_ARGON_CONFIG_LINK=${LUCI_APP_ARGON_CONFIG_LINK:-https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.2.9/luci-app-argon-config_0.9-20210309_all.ipk}
+LUCI_APP_ARGON_CONFIG_FILENAME=$(echo $LUCI_APP_ARGON_CONFIG_LINK | cut -d/ -f9)
 
-. /lib/functions/network.sh; network_find_wan NET_IF; network_get_ipaddr IP_ADDR "${NET_IF}"
-read -p "Now copy the backup file to your computer by entering the following command on your terminal:"$'\n'"scp $USER@$IP_ADDR:/tmp/$BACKUPFILE ."$'\n'"Enter any key after you are finished."
+wget --no-check-certificate $LUCI_APP_ARGON_CONFIG_LINK -O $LUCI_APP_ARGON_CONFIG_FILENAME
+opkg install $LUCI_APP_ARGON_CONFIG_FILENAME
 
-read -p "Enter the Downloadlink [https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin]: " DOWNLOAD_LINK
-DOWNLOAD_LINK=${DOWNLOAD_LINK:-https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin}
-wget --no-check-certificate $DOWNLOAD_LINK
-FILENAME=$(echo $DOWNLOAD_LINK | cut -d/ -f9)
+rm $LUCI_APP_ARGON_CONFIG_FILENAME 
 
-read -p "Enter the link for the sha256sum file [https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums]: " SHA256SUMS_LINK
-SHA256SUMS_LINK=${SHA256SUMS_LINK:-https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums}
+read -p "Enter the download link of the luci app argon config [https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.2.9/luci-theme-argon_2.2.9-20211016-1_all.ipk]"
+LUCI_ARGON_THEME_LINK=${LUCI_ARGON_THEME_LINK:-https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.2.9/luci-theme-argon_2.2.9-20211016-1_all.ipk}
+LUCI_ARGON_THEME_FILENAME=$(echo $LUCI_ARGON_THEME_LINK | cut -d/ -f9)
+wget --no-check-certificate $LUCI_ARGON_THEME_LINK -O $LUCI_ARGON_THEME_FILENAME
+opkg install $LUCI_ARGON_THEME_FILENAME
 
-wget --no-check-certificate $SHA256SUMS_LINK
-SHA256SUMS=$(echo $SHA256SUMS_LINK | cut -d/ -f9)
-sha256sum -c $SHA256SUMS 2>/dev/null | if grep OK; then sysupgrade -T -f $BACKUPFILE $FILENAME 2>&1 > error.log; if [[ $? -eq 0 ]]; then sysupgrade -c -o -v -k -f $BACKUPFILE $FILENAME; else cat error.log; fi; else echo "sum is not correct"; fi
+rm $LUCI_ARGON_THEME_FILENAME
