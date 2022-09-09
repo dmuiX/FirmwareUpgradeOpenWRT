@@ -24,9 +24,9 @@ DOWNLOAD_LINK=${DOWNLOAD_LINK:-https://downloads.openwrt.org/releases/21.02.2/ta
 wget --no-check-certificate $DOWNLOAD_LINK
 FILENAME=$(echo $DOWNLOAD_LINK | cut -d/ -f9)
 
-read -p "Enter the link for the sha256sum file [https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums]: " SHA256SUMS_LINK
-SHA256SUMS_LINK=${SHA256SUMS_LINK:-https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums}
+read -p "Enter SHA256SUM: " SHA256SUM
+#SHA256SUMS_LINK=${SHA256SUMS_LINK:-https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/sha256sums}
 
-wget --no-check-certificate $SHA256SUMS_LINK
-SHA256SUMS=$(echo $SHA256SUMS_LINK | cut -d/ -f9)
-sha256sum -c $SHA256SUMS 2>/dev/null | if grep OK; then sysupgrade -T -f $BACKUPFILE $FILENAME 2>&1 > error.log; if [[ $? -eq 0 ]]; then sysupgrade -c -o -v -k -f $BACKUPFILE $FILENAME; else cat error.log; fi; else echo "sum is not correct"; fi
+#wget --no-check-certificate $SHA256SUMS_LINK
+#SHA256SUMS=$(echo $SHA256SUMS_LINK | cut -d/ -f9)
+sha256sum -c $SHA256SUM 2>/dev/null | if grep OK; then sysupgrade -T -f $BACKUPFILE $FILENAME 2>&1 > error.log; if [[ $? -eq 0 ]]; then sysupgrade -c -o -v -k -f $BACKUPFILE $FILENAME; else cat error.log; fi; else echo "sum is not correct"; fi
