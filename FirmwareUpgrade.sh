@@ -1,3 +1,4 @@
+#!/bin/sh
 echo "installing wget and some other stuff"
 opkg update
 opkg install openssl-util ca-certificates
