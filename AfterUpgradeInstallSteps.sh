@@ -1,4 +1,4 @@
-
+#!/bin/sh
 # not sure so far if this is really needed:
 # opkg list-installed | grep -q uclient-fetch || opkg install uclient-fetch
 # opkg list-installed | grep -q libustream || opkg install libustream-mbedtls
@@ -16,9 +16,9 @@ opkg install $LUCI_APP_ARGON_CONFIG_FILENAME
 opkg update
 opkg install luci-compat luci-lib-ipkg
 
-rm $LUCI_APP_ARGON_CONFIG_FILENAME 
+rm $LUCI_APP_ARGON_CONFIG_FILENAME
 
-read -p "Enter the download link of the luci app argon config [https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.2.9.4/luci-theme-argon-master_2.2.9.4_all.ipk]"
+read -p "Enter the download link of the luci argon theme [https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.2.9.4/luci-theme-argon-master_2.2.9.4_all.ipk]"
 LUCI_ARGON_THEME_LINK=${LUCI_ARGON_THEME_LINK:-https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.2.9.4/luci-theme-argon-master_2.2.9.4_all.ipk}
 LUCI_ARGON_THEME_FILENAME=$(echo $LUCI_ARGON_THEME_LINK | cut -d/ -f9)
 
