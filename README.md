@@ -11,4 +11,5 @@
 
 # Using it:
 cd /tmp && wget https://raw.githubusercontent.com/dmuiX/FirmwareUpgradeOpenWRT/master/FirmwareUpgrade.sh -O upgrade.sh && chmod +x upgrade.sh && ./upgrade.sh
+
 cd /tmp && wget https://raw.githubusercontent.com/dmuiX/FirmwareUpgradeOpenWRT/master/AfterUpgradeInstallSteps.sh -O theme.sh && chmod +x theme.sh && ./theme.sh
