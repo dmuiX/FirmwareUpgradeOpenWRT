@@ -17,7 +17,7 @@ umask go=
 sysupgrade -b $BACKUPFILE
 
 . /lib/functions/network.sh; network_find_wan NET_IF; network_get_ipaddr IP_ADDR "${NET_IF}"
-read -p "Now copy the backup file to your computer by entering the following command on your terminal:"$'\n'"scp $USER@$IP_ADDR:/tmp/$BACKUPFILE ."$'\n'"Enter any key after you are finished."
+read -p "Now copy the backup file to your computer by entering the following command on your terminal:"$'\n'"scp -O $USER@$IP_ADDR:/tmp/$BACKUPFILE ."$'\n'"Enter any key after you are finished."
 
 read -p "Enter the Downloadlink [https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin]: " DOWNLOAD_LINK
 DOWNLOAD_LINK=${DOWNLOAD_LINK:-https://downloads.openwrt.org/releases/21.02.2/targets/ath79/generic/openwrt-21.02.2-ath79-generic-ubnt_unifiac-lr-squashfs-sysupgrade.bin}
