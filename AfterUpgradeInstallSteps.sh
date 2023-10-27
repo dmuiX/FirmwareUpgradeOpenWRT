@@ -3,7 +3,7 @@
 opkg update
 opkg install luci-compat luci-lib-ipkg
 
-read -p "Enter the download link of the luci argon theme [https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.3/luci-theme-argon_2.3_all.ipk]"
+read -p "Enter the download link of the luci argon theme [https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.3.1/luci-theme-argon_2.3.1_all.ipk]"
 LUCI_ARGON_THEME_LINK=${LUCI_ARGON_THEME_LINK:-https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.3.1/luci-theme-argon_2.3.1_all.ipk}
 LUCI_ARGON_THEME_FILENAME=$(echo $LUCI_ARGON_THEME_LINK | cut -d/ -f9)
 
