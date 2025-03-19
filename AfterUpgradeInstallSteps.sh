@@ -14,8 +14,8 @@ rm $LUCI_ARGON_THEME_FILENAME
 
 # for devices with enough storage its possible to install an config app for the argon theme:
 
-read -p "Enter the download link of the luci app argon config [https://github.com/jerrykuku/luci-theme-argon/releases/download/v1.8.4/luci-app-argon-config_0.9-20220424_all.ipk]"
-LUCI_APP_ARGON_CONFIG_LINK=${LUCI_APP_ARGON_CONFIG_LINK:-https://github.com/jerrykuku/luci-theme-argon/releases/download/v1.8.4/luci-app-argon-config_0.9-20220424_all.ipk}
+read -p "Enter the download link of the luci app argon config [https://github.com/jerrykuku/luci-app-argon-config/releases/download/v0.9/luci-app-argon-config_0.9_all.ipk"
+LUCI_APP_ARGON_CONFIG_LINK=${LUCI_APP_ARGON_CONFIG_LINK:-https://github.com/jerrykuku/luci-app-argon-config/releases/download/v0.9/luci-app-argon-config_0.9_all.ipk}
 LUCI_APP_ARGON_CONFIG_FILENAME=$(echo $LUCI_APP_ARGON_CONFIG_LINK | cut -d/ -f9)
 
 wget --no-check-certificate $LUCI_APP_ARGON_CONFIG_LINK -O $LUCI_APP_ARGON_CONFIG_FILENAME
