@@ -1,19 +1,73 @@
 #!/bin/sh
 set -e
 
-# Configuration for SMB upload - adjust these to your SMB server
-SMB_SERVER="//192.168.1.5/openwrt-backup"
-SMB_MOUNT="/mnt/openwrt-backup"
-SMB_USER="openwrt-backup"
-SMB_PASS="h%pJGpJqNn^yx8Kmj@Pi"
-SMB_DOMAIN="WORKGROUP"   # Optional, remove if not needed
+cd /tmp
 
-# Router-specific configuration
-TARGET_PATH="targets/mediatek/mt7622"
-FIRMWARE_FILE="xiaomi_redmi-router-ax6s-squashfs-sysupgrade.itb"
-AUTOMATED_MODE=1  # Set to 1 for fully automated operation
+# Load environment variables from .env file
+ENV_FILE="/root/FirmwareUpgradeOpenWRT/.env"
+
+if [ -f "$ENV_FILE" ]; then
+  # Source the .env file
+  . "$ENV_FILE"
+  echo "Loaded configuration from $ENV_FILE"
+else
+  echo "ERROR: Configuration file not found: $ENV_FILE"
+  echo ""
+  echo "Create the file with:"
+  echo ""
+  cat << 'ENVEXAMPLE'
+cat > /root/FirmwareUpgradeOpenWRT/.env << 'EOF'
+# SMB Backup Configuration
+SMB_SERVER=//192.168.1.5/openwrt-backups
+SMB_MOUNT=/mnt/openwrt-backups
+SMB_USER=openwrt-backup
+SMB_PASSWORD=your-password-here
+SMB_DOMAIN=WORKGROUP
+
+# Router Configuration
+TARGET=mediatek
+SUBTARGET=mt7622
+DEVICE_NAME=xiaomi_redmi-router-ax6s
+
+# Upgrade Settings
+FACTORY_UPGRADE=0  # Set to 1 for factory upgrade (wipes config)
+AUTOMATED_MODE=0   # Set to 1 for fully automated operation (no prompts)
+EOF
+ENVEXAMPLE
+  echo ""
+  echo "Then secure it with:"
+  echo "  chmod 600 /root/FirmwareUpgradeOpenWRT/.env"
+  echo ""
+  exit 1
+fi
+
+# Validate required variables
+REQUIRED_VARS="SMB_SERVER SMB_MOUNT SMB_USER SMB_PASSWORD TARGET SUBTARGET DEVICE_NAME"
+for VAR in $REQUIRED_VARS; do
+  eval VALUE=\$$VAR
+  if [ -z "$VALUE" ]; then
+    echo "ERROR: Required variable $VAR is not set in $ENV_FILE"
+    exit 1
+  fi
+done
+
+# Set defaults for optional variables
+SMB_DOMAIN="${SMB_DOMAIN:-WORKGROUP}"
+FACTORY_UPGRADE="${FACTORY_UPGRADE:-0}"
+AUTOMATED_MODE="${AUTOMATED_MODE:-0}"
 
 echo "=== OpenWrt Automatic Firmware Upgrade Script ==="
+
+# Set firmware type and extension based on upgrade mode
+if [ "$FACTORY_UPGRADE" -eq 1 ]; then
+  FIRMWARE_TYPE="factory"
+  FIRMWARE_EXT="bin"
+  echo "Mode: FACTORY UPGRADE (will wipe configuration)"
+else
+  FIRMWARE_TYPE="squashfs-sysupgrade"
+  FIRMWARE_EXT="itb"
+  echo "Mode: STANDARD UPGRADE (will keep configuration)"
+fi
 
 # Check if packages are already installed
 NEEDS_PACKAGES=0
@@ -54,103 +108,61 @@ fi
 echo "Latest stable version detected: $LATEST_VERSION"
 
 # Build download URLs
-BASE_URL="https://downloads.openwrt.org/releases/${LATEST_VERSION}/${TARGET_PATH}"
-FIRMWARE_URL="${BASE_URL}/openwrt-${LATEST_VERSION}-${FIRMWARE_FILE}"
+BASE_URL="https://downloads.openwrt.org/releases/${LATEST_VERSION}/targets/${TARGET}/${SUBTARGET}"
+FIRMWARE_FILENAME="openwrt-${LATEST_VERSION}-${TARGET}-${SUBTARGET}-${DEVICE_NAME}-${FIRMWARE_TYPE}.${FIRMWARE_EXT}"
+FIRMWARE_URL="${BASE_URL}/${FIRMWARE_FILENAME}"
 SHA256_URL="${BASE_URL}/sha256sums"
 
 echo "Firmware URL: $FIRMWARE_URL"
-
-# Download SHA256SUMS file
-echo "=== Downloading SHA256 Checksums ==="
-wget -q -O sha256sums "$SHA256_URL" || { echo "Failed to download checksums"; exit 1; }
-
-# Extract the checksum for our specific firmware file
-EXPECTED_CHECKSUM=$(grep "$FIRMWARE_FILE" sha256sums | awk '{print $1}')
-
-if [ -z "$EXPECTED_CHECKSUM" ]; then
-  echo "Failed to find checksum for $FIRMWARE_FILE"
-  exit 1
-fi
-
-echo "Expected SHA256: $EXPECTED_CHECKSUM"
-
-# Install theme before upgrade
-echo "=== Installing LuCI Argon Theme ==="
-
-NEEDS_THEME_UPDATE=0
-if ! opkg list-installed | grep -q luci-compat || \
-   ! opkg list-installed | grep -q luci-lib-ipkg || \
-   ! opkg list-installed | grep -q luci-theme-argon || \
-   ! opkg list-installed | grep -q luci-app-argon-config; then
-  NEEDS_THEME_UPDATE=1
-fi
-
-if [ "$NEEDS_THEME_UPDATE" -eq 1 ]; then
-  opkg update || { echo "opkg update failed"; exit 1; }
-fi
-
-if ! opkg list-installed | grep -q luci-compat || ! opkg list-installed | grep -q luci-lib-ipkg; then
-  opkg install luci-compat luci-lib-ipkg || { echo "Failed to install theme dependencies"; exit 1; }
-fi
-
-if ! opkg list-installed | grep -q luci-theme-argon; then
-  DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.4.3/luci-theme-argon-2.4.3-r20250722.ipk"
-  
-  LUCI_ARGON_THEME_FILENAME=$(basename "$DEFAULT_THEME_LINK")
-  
-  wget -O "$LUCI_ARGON_THEME_FILENAME" "$DEFAULT_THEME_LINK" || { echo "Theme download failed"; exit 1; }
-  opkg install "$LUCI_ARGON_THEME_FILENAME" || { echo "Theme install failed"; rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1; }
-  rm -f "$LUCI_ARGON_THEME_FILENAME"
-  echo "LuCI Argon theme installed."
-else
-  echo "LuCI Argon theme already installed."
-fi
-
-if ! opkg list-installed | grep -q luci-app-argon-config; then
-  DEFAULT_ARGON_CONFIG_LINK="https://github.com/jerrykuku/luci-app-argon-config/releases/download/v0.9/luci-app-argon-config_0.9_all.ipk"
-  
-  LUCI_APP_ARGON_CONFIG_FILENAME=$(basename "$DEFAULT_ARGON_CONFIG_LINK")
-
-  wget -O "$LUCI_APP_ARGON_CONFIG_FILENAME" "$DEFAULT_ARGON_CONFIG_LINK" || { echo "App download failed"; exit 1; }
-  opkg install "$LUCI_APP_ARGON_CONFIG_FILENAME" luci-app-sqm || { echo "App install failed"; rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1; }
-  rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"
-  echo "LuCI Argon config app installed."
-else
-  echo "LuCI Argon config app already installed."
-fi
-
-# Set Argon theme as default
-CURRENT_THEME=$(uci get luci.main.mediaurlbase 2>/dev/null || echo "")
-if [ "$CURRENT_THEME" != "/luci-static/argon" ]; then
-  uci set luci.main.mediaurlbase='/luci-static/argon'
-  uci commit luci
-  /etc/init.d/uhttpd restart || { echo "Warning: uhttpd restart failed"; }
-  echo "Argon theme set as default."
-else
-  echo "Argon theme already set as default."
-fi
 
 # Create backup
 echo "=== Creating Backup ==="
 BACKUPFILE="backup-${HOSTNAME}-$(date +%F).tar.gz"
 umask 077
 sysupgrade -b "$BACKUPFILE" || { echo "Backup creation failed"; exit 1; }
+echo "Backup created: $BACKUPFILE"
 
 # Upload backup to SMB
 echo "=== Uploading Backup to SMB Share ==="
 mkdir -p "$SMB_MOUNT"
-mount -t cifs "$SMB_SERVER" "$SMB_MOUNT" -o username="$SMB_USER",password="$SMB_PASS",domain="$SMB_DOMAIN",rw || { echo "Failed to mount SMB share"; exit 1; }
+mount -t cifs "$SMB_SERVER" "$SMB_MOUNT" -o username="$SMB_USER",password="$SMB_PASSWORD",domain="$SMB_DOMAIN",rw || { echo "Failed to mount SMB share"; exit 1; }
 
 cp "$BACKUPFILE" "$SMB_MOUNT/" || { echo "Failed to copy backup"; umount "$SMB_MOUNT"; exit 1; }
 
 echo "Backup uploaded successfully. Unmounting..."
 umount "$SMB_MOUNT"
 
+# Download SHA256SUMS file
+echo "=== Downloading SHA256 Checksums ==="
+wget -q -O sha256sums "$SHA256_URL" || { echo "Failed to download checksums"; exit 1; }
+
+# Extract the checksum for our specific firmware file
+EXPECTED_CHECKSUM=$(grep "${DEVICE_NAME}-${FIRMWARE_TYPE}.${FIRMWARE_EXT}" sha256sums | awk '{print $1}')
+
+if [ -z "$EXPECTED_CHECKSUM" ]; then
+  echo "Failed to find checksum for firmware file"
+  echo "Looking for: ${DEVICE_NAME}-${FIRMWARE_TYPE}.${FIRMWARE_EXT}"
+  exit 1
+fi
+
+echo "Expected SHA256: $EXPECTED_CHECKSUM"
+
 # Download firmware
 echo "=== Downloading Firmware ==="
-FIRMWARE_FILENAME="openwrt-${LATEST_VERSION}-${FIRMWARE_FILE}"
+echo "Firmware filename: $FIRMWARE_FILENAME"
+echo "Downloading from: $FIRMWARE_URL"
+echo ""
 
 wget -O "$FIRMWARE_FILENAME" "$FIRMWARE_URL" || { echo "Firmware download failed"; exit 1; }
+
+# Verify the file was downloaded
+if [ ! -f "$FIRMWARE_FILENAME" ]; then
+  echo "ERROR: Firmware file not found after download!"
+  echo "Expected: $FIRMWARE_FILENAME"
+  exit 1
+fi
+
+echo "Firmware downloaded successfully: $(ls -lh $FIRMWARE_FILENAME)"
 
 # Verify checksum
 echo "=== Verifying Firmware Checksum ==="
@@ -165,19 +177,33 @@ fi
 
 echo "Checksum verified successfully."
 
-# Test firmware compatibility
-echo "=== Testing Firmware Compatibility ==="
-if ! sysupgrade -T "$FIRMWARE_FILENAME" 2>&1 | tee error.log; then
-  echo "Upgrade test failed:"
-  cat error.log
-  exit 1
-fi
+# Test firmware compatibility (skip for factory images as they're not meant for sysupgrade -T)
+if [ "$FACTORY_UPGRADE" -eq 0 ]; then
+  echo "=== Testing Firmware Compatibility ==="
+  sysupgrade -T "$FIRMWARE_FILENAME" 2>&1
+  SYSUPGRADE_EXIT=$?
 
-echo "Firmware compatibility test passed."
+  if [ $SYSUPGRADE_EXIT -ne 0 ]; then
+    echo ""
+    echo "WARNING: Firmware compatibility test failed!"
+    echo "This upgrade may require factory image."
+    echo "Set FACTORY_UPGRADE=1 in .env to use factory image instead."
+    exit 1
+  fi
+  echo "Firmware compatibility test passed."
+else
+  echo "=== Skipping Compatibility Test (factory image) ==="
+fi
 
 # Confirm upgrade
 if [ "$AUTOMATED_MODE" -eq 0 ]; then
-  read -p "Proceed with upgrade to version $LATEST_VERSION? Router will reboot. (y/n): " CONFIRM
+  echo ""
+  if [ "$FACTORY_UPGRADE" -eq 1 ]; then
+    read -p "Proceed with FACTORY upgrade to $LATEST_VERSION? This will WIPE configuration! (y/n): " CONFIRM
+  else
+    read -p "Proceed with upgrade to $LATEST_VERSION? Router will reboot. (y/n): " CONFIRM
+  fi
+  
   if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
     echo "Upgrade cancelled by user."
     exit 0
@@ -186,7 +212,14 @@ fi
 
 # Perform upgrade
 echo "=== Starting Firmware Upgrade to $LATEST_VERSION ==="
-echo "Router will reboot shortly..."
 
-sysupgrade "$FIRMWARE_FILENAME" || { echo "Upgrade failed!"; exit 1; }
+if [ "$FACTORY_UPGRADE" -eq 1 ]; then
+  echo "Using factory image with config wipe..."
+  echo "Router will reboot shortly..."
+  sysupgrade -n "$FIRMWARE_FILENAME" || { echo "Upgrade failed!"; exit 1; }
+else
+  echo "Using sysupgrade image (keeping configuration)..."
+  echo "Router will reboot shortly..."
+  sysupgrade "$FIRMWARE_FILENAME" || { echo "Upgrade failed!"; exit 1; }
+fi
 
