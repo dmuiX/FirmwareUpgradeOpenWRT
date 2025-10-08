@@ -1,3 +1,9 @@
+# AutomaticFirmwareUpgrade
+
+- Store it under /Overlays
+- setup a cron job to regularly run it
+- Maybe once a week or sth. Openwrt Updates are not that common.
+
 # FirmwareUpgradeOpenWRT
 - A short bash script to run a firmware upgrade on an OpenWRT-Router
 - first install some requirements:
