@@ -216,7 +216,7 @@ echo "=== Starting Firmware Upgrade to $LATEST_VERSION ==="
 if [ "$FACTORY_UPGRADE" -eq 1 ]; then
   echo "Using factory image with config wipe..."
   echo "Router will reboot shortly..."
-  sysupgrade -n "$FIRMWARE_FILENAME" || { echo "Upgrade failed!"; exit 1; }
+  sysupgrade -F -n "$FIRMWARE_FILENAME" || { echo "Upgrade failed!"; exit 1; }
 else
   echo "Using sysupgrade image (keeping configuration)..."
   echo "Router will reboot shortly..."
