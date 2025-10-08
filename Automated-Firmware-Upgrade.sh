@@ -1,225 +1,139 @@
 #!/bin/sh
-set -e
-
+set -eE
 cd /tmp
 
-# Load environment variables from .env file
+# Error handling
+trap 'echo "ERROR at line $LINENO. Backup: $BACKUP"; exit 1' ERR
+trap 'rm -f releases.html sha256sums 2>/dev/null' EXIT
+
+# Load config
 ENV_FILE="/root/FirmwareUpgradeOpenWRT/.env"
+[ -f "$ENV_FILE" ] || { echo "ERROR: $ENV_FILE not found"; exit 1; }
+. "$ENV_FILE"
 
-if [ -f "$ENV_FILE" ]; then
-  # Source the .env file
-  . "$ENV_FILE"
-  echo "Loaded configuration from $ENV_FILE"
-else
-  echo "ERROR: Configuration file not found: $ENV_FILE"
-  echo ""
-  echo "Create the file with:"
-  echo ""
-  cat << 'ENVEXAMPLE'
-cat > /root/FirmwareUpgradeOpenWRT/.env << 'EOF'
-# SMB Backup Configuration
-SMB_SERVER=//192.168.1.5/openwrt-backups
-SMB_MOUNT=/mnt/openwrt-backups
-SMB_USER=openwrt-backup
-SMB_PASSWORD=your-password-here
-SMB_DOMAIN=WORKGROUP
-
-# Router Configuration
-TARGET=mediatek
-SUBTARGET=mt7622
-DEVICE_NAME=xiaomi_redmi-router-ax6s
-
-# Upgrade Settings
-FACTORY_UPGRADE=0  # Set to 1 for factory upgrade (wipes config)
-AUTOMATED_MODE=0   # Set to 1 for fully automated operation (no prompts)
-EOF
-ENVEXAMPLE
-  echo ""
-  echo "Then secure it with:"
-  echo "  chmod 600 /root/FirmwareUpgradeOpenWRT/.env"
-  echo ""
-  exit 1
-fi
-
-# Validate required variables
-REQUIRED_VARS="SMB_SERVER SMB_MOUNT SMB_USER SMB_PASSWORD TARGET SUBTARGET DEVICE_NAME"
-for VAR in $REQUIRED_VARS; do
-  eval VALUE=\$$VAR
-  if [ -z "$VALUE" ]; then
-    echo "ERROR: Required variable $VAR is not set in $ENV_FILE"
-    exit 1
-  fi
+# Validate vars
+for V in SMB_SERVER SMB_MOUNT SMB_USER SMB_PASSWORD TARGET SUBTARGET DEVICE_NAME; do
+  eval [ -z "\$$V" ] && { echo "ERROR: $V not set"; exit 1; }
 done
 
-# Set defaults for optional variables
-SMB_DOMAIN="${SMB_DOMAIN:-WORKGROUP}"
-FACTORY_UPGRADE="${FACTORY_UPGRADE:-0}"
-AUTOMATED_MODE="${AUTOMATED_MODE:-0}"
+FACTORY_UPGRADE="${FACTORY_UPGRADE:-0}"; AUTOMATED_MODE="${AUTOMATED_MODE:-0}"
 
-echo "=== OpenWrt Automatic Firmware Upgrade Script ==="
+echo "=== OpenWrt Safe Upgrade ==="
+echo "Device: $DEVICE_NAME ($TARGET/$SUBTARGET)"
 
-# Set firmware type and extension based on upgrade mode
+# Set firmware type
 if [ "$FACTORY_UPGRADE" -eq 1 ]; then
-  FIRMWARE_TYPE="factory"
-  FIRMWARE_EXT="bin"
-  echo "Mode: FACTORY UPGRADE (will wipe configuration)"
+  TYPE="factory"; EXT="bin"; echo "Mode: FACTORY (wipes config)"
 else
-  FIRMWARE_TYPE="squashfs-sysupgrade"
-  FIRMWARE_EXT="itb"
-  echo "Mode: STANDARD UPGRADE (will keep configuration)"
+  TYPE="squashfs-sysupgrade"; EXT="itb"; echo "Mode: SYSUPGRADE (keeps config)"
 fi
 
-# Check if packages are already installed
-NEEDS_PACKAGES=0
-if ! opkg list-installed | grep -q openssl-util || \
-   ! opkg list-installed | grep -q ca-certificates || \
-   ! opkg list-installed | grep -q kmod-fs-cifs || \
-   ! opkg list-installed | grep -q libustream-mbedtls; then
-  NEEDS_PACKAGES=1
-fi
+# Safe download function
+dl() {
+  wget --spider "$1" 2>&1 | grep -q "200 OK" || { echo "ERROR: 404 - $1"; return 1; }
+  wget --tries=3 --waitretry=5 --timeout=30 -c ${3:+--progress=dot:giga} -O "$2" "$1" || return 1
+  [ $(stat -c%s "$2") -lt 1024 ] && { echo "ERROR: File too small"; rm -f "$2"; return 1; }
+}
 
-if [ "$NEEDS_PACKAGES" -eq 1 ]; then
-  echo "Installing required packages..."
-  opkg update || { echo "opkg update failed"; exit 1; }
-  
-  opkg install openssl-util ca-certificates kmod-fs-cifs libustream-mbedtls || { echo "Package install failed"; exit 1; }
+# Check space
+[ $(df /tmp | awk 'NR==2 {print $4}') -lt 10240 ] && { echo "ERROR: Low space in /tmp"; exit 1; }
+
+# Install packages if needed
+opkg list-installed | grep -q "kmod-fs-cifs" || {
+  echo "Installing packages..."; opkg update && opkg install openssl-util ca-certificates kmod-fs-cifs libustream-mbedtls || exit 1
+}
+
+# Detect version
+dl "https://downloads.openwrt.org/releases/" "releases.html" || exit 1
+VER=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+/' releases.html | grep -v rc | sed 's|/||g' | sort -V | tail -1)
+[ -z "$VER" ] && { echo "ERROR: Cannot detect version"; exit 1; }
+
+CUR=$(cat /etc/openwrt_release | grep DISTRIB_RELEASE | cut -d= -f2 | tr -d "'")
+echo "Current: $CUR → Target: $VER"
+[ "$CUR" = "$VER" ] && { echo "Already latest version"; exit 0; }
+
+# Build URLs
+BASE="https://downloads.openwrt.org/releases/${VER}/targets/${TARGET}/${SUBTARGET}"
+FW="openwrt-${VER}-${TARGET}-${SUBTARGET}-${DEVICE_NAME}-${TYPE}.${EXT}"
+
+# Backup
+echo "Creating backup..."
+BAK="backup-${HOSTNAME}-$(date +%F-%H%M%S).tar.gz"
+sysupgrade -b "$BAK" || { echo "ERROR: Backup failed"; exit 1; }
+[ $(stat -c%s "$BAK") -lt 1024 ] && { echo "ERROR: Backup too small"; exit 1; }
+tar -tzf "$BAK" >/dev/null 2>&1 || { echo "ERROR: Backup corrupted"; exit 1; }
+echo "✓ Backup: $BAK"
+BACKUP="$BAK"  # For error trap
+
+# Upload to SMB
+echo "Uploading backup..."
+SRV=$(echo "$SMB_SERVER" | sed 's|//||' | cut -d/ -f1)
+if ping -c1 -W2 "$SRV" >/dev/null 2>&1 && mkdir -p "$SMB_MOUNT" && \
+   mount -t cifs "$SMB_SERVER" "$SMB_MOUNT" -o username="$SMB_USER",password="$SMB_PASSWORD",domain="${SMB_DOMAIN:-WORKGROUP}",rw,timeout=15 2>/dev/null; then
+  cp "$BAK" "$SMB_MOUNT/" && echo "✓ Uploaded to SMB" || echo "WARNING: Upload failed"
+  umount "$SMB_MOUNT"
 else
-  echo "Required packages already installed."
+  echo "WARNING: SMB unavailable, backup is local only"
 fi
 
-# Detect latest stable release
-echo "=== Detecting Latest OpenWrt Release ==="
-RELEASES_URL="https://downloads.openwrt.org/releases/"
+# Download checksums
+dl "${BASE}/sha256sums" "sha256sums" || { echo "ERROR: Cannot get checksums"; exit 1; }
+[ -s sha256sums ] || { echo "ERROR: Checksums empty"; exit 1; }
 
-wget -q -O releases.html "$RELEASES_URL" || { echo "Failed to fetch releases page"; exit 1; }
-
-# Extract version numbers, exclude RC versions, sort and get the latest
-LATEST_VERSION=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+/' releases.html | \
-                 grep -v 'rc' | \
-                 sed 's|/||g' | \
-                 sort -V | \
-                 tail -n 1)
-
-if [ -z "$LATEST_VERSION" ]; then
-  echo "Failed to detect latest version"
+# Extract checksum
+CHK=$(grep "${DEVICE_NAME}-${TYPE}\.${EXT}" sha256sums | awk '{print $1}')
+if [ -z "$CHK" ]; then
+  echo "ERROR: Checksum not found for ${DEVICE_NAME}-${TYPE}.${EXT}"
+  echo "Available:"; grep "$DEVICE_NAME" sha256sums | awk '{print "  "$2}' || echo "  None"
   exit 1
 fi
-
-echo "Latest stable version detected: $LATEST_VERSION"
-
-# Build download URLs
-BASE_URL="https://downloads.openwrt.org/releases/${LATEST_VERSION}/targets/${TARGET}/${SUBTARGET}"
-FIRMWARE_FILENAME="openwrt-${LATEST_VERSION}-${TARGET}-${SUBTARGET}-${DEVICE_NAME}-${FIRMWARE_TYPE}.${FIRMWARE_EXT}"
-FIRMWARE_URL="${BASE_URL}/${FIRMWARE_FILENAME}"
-SHA256_URL="${BASE_URL}/sha256sums"
-
-echo "Firmware URL: $FIRMWARE_URL"
-
-# Create backup
-echo "=== Creating Backup ==="
-BACKUPFILE="backup-${HOSTNAME}-$(date +%F).tar.gz"
-umask 077
-sysupgrade -b "$BACKUPFILE" || { echo "Backup creation failed"; exit 1; }
-echo "Backup created: $BACKUPFILE"
-
-# Upload backup to SMB
-echo "=== Uploading Backup to SMB Share ==="
-mkdir -p "$SMB_MOUNT"
-mount -t cifs "$SMB_SERVER" "$SMB_MOUNT" -o username="$SMB_USER",password="$SMB_PASSWORD",domain="$SMB_DOMAIN",rw || { echo "Failed to mount SMB share"; exit 1; }
-
-cp "$BACKUPFILE" "$SMB_MOUNT/" || { echo "Failed to copy backup"; umount "$SMB_MOUNT"; exit 1; }
-
-echo "Backup uploaded successfully. Unmounting..."
-umount "$SMB_MOUNT"
-
-# Download SHA256SUMS file
-echo "=== Downloading SHA256 Checksums ==="
-wget -q -O sha256sums "$SHA256_URL" || { echo "Failed to download checksums"; exit 1; }
-
-# Extract the checksum for our specific firmware file
-EXPECTED_CHECKSUM=$(grep "${DEVICE_NAME}-${FIRMWARE_TYPE}.${FIRMWARE_EXT}" sha256sums | awk '{print $1}')
-
-if [ -z "$EXPECTED_CHECKSUM" ]; then
-  echo "Failed to find checksum for firmware file"
-  echo "Looking for: ${DEVICE_NAME}-${FIRMWARE_TYPE}.${FIRMWARE_EXT}"
-  exit 1
-fi
-
-echo "Expected SHA256: $EXPECTED_CHECKSUM"
+[ ${#CHK} -ne 64 ] && { echo "ERROR: Invalid checksum format"; exit 1; }
 
 # Download firmware
-echo "=== Downloading Firmware ==="
-echo "Firmware filename: $FIRMWARE_FILENAME"
-echo "Downloading from: $FIRMWARE_URL"
-echo ""
+echo "Downloading firmware..."
+dl "${BASE}/${FW}" "$FW" "progress" || { echo "ERROR: Download failed"; exit 1; }
 
-wget -O "$FIRMWARE_FILENAME" "$FIRMWARE_URL" || { echo "Firmware download failed"; exit 1; }
+# Verify size
+SZ=$(stat -c%s "$FW")
+[ "$SZ" -lt 5000000 ] && { echo "ERROR: Firmware too small ($SZ bytes)"; rm -f "$FW"; exit 1; }
+echo "✓ Size: $((SZ/1024/1024))MB"
 
-# Verify the file was downloaded
-if [ ! -f "$FIRMWARE_FILENAME" ]; then
-  echo "ERROR: Firmware file not found after download!"
-  echo "Expected: $FIRMWARE_FILENAME"
-  exit 1
-fi
-
-echo "Firmware downloaded successfully: $(ls -lh $FIRMWARE_FILENAME)"
+# Check file type
+FT=$(file -b "$FW" 2>/dev/null || echo "unknown")
+echo "$FT" | grep -qiE "html|ascii text" && { echo "ERROR: Downloaded HTML/text not firmware!"; rm -f "$FW"; exit 1; }
 
 # Verify checksum
-echo "=== Verifying Firmware Checksum ==="
-ACTUAL_CHECKSUM=$(sha256sum "$FIRMWARE_FILENAME" | awk '{print $1}')
-
-if [ "$ACTUAL_CHECKSUM" != "$EXPECTED_CHECKSUM" ]; then
-  echo "ERROR: Checksum mismatch!"
-  echo "Expected: $EXPECTED_CHECKSUM"
-  echo "Got:      $ACTUAL_CHECKSUM"
-  exit 1
+echo "Verifying checksum..."
+ACT=$(sha256sum "$FW" | awk '{print $1}')
+if [ "$ACT" != "$CHK" ]; then
+  echo "CRITICAL: CHECKSUM MISMATCH!"
+  echo "Expected: $CHK"; echo "Got: $ACT"
+  rm -f "$FW"; exit 1
 fi
+echo "✓ Checksum OK"
 
-echo "Checksum verified successfully."
-
-# Test firmware compatibility (skip for factory images as they're not meant for sysupgrade -T)
-if [ "$FACTORY_UPGRADE" -eq 0 ]; then
-  echo "=== Testing Firmware Compatibility ==="
-  sysupgrade -T "$FIRMWARE_FILENAME" 2>&1
-  SYSUPGRADE_EXIT=$?
-
-  if [ $SYSUPGRADE_EXIT -ne 0 ]; then
-    echo ""
-    echo "WARNING: Firmware compatibility test failed!"
-    echo "This upgrade may require factory image."
-    echo "Set FACTORY_UPGRADE=1 in .env to use factory image instead."
-    exit 1
-  fi
-  echo "Firmware compatibility test passed."
+# Test firmware
+echo "Testing firmware..."
+if ! sysupgrade -T "$FW" >/dev/null 2>&1; then
+  echo "WARNING: Test failed"
+  [ "$AUTOMATED_MODE" -eq 1 ] && { echo "Aborting"; exit 1; }
+  read -p "Continue? (y/n): " C; [ "$C" = "y" ] || [ "$C" = "Y" ] || exit 0
 else
-  echo "=== Skipping Compatibility Test (factory image) ==="
+  echo "✓ Firmware valid"
 fi
 
-# Confirm upgrade
-if [ "$AUTOMATED_MODE" -eq 0 ]; then
-  echo ""
+# Confirm
+echo ""; echo "=== Ready to Upgrade $CUR → $VER ==="
+[ "$AUTOMATED_MODE" -eq 0 ] && {
   if [ "$FACTORY_UPGRADE" -eq 1 ]; then
-    read -p "Proceed with FACTORY upgrade to $LATEST_VERSION? This will WIPE configuration! (y/n): " CONFIRM
+    echo "⚠️  FACTORY WIPES ALL SETTINGS!"
+    read -p "Type YES: " C; [ "$C" = "YES" ] || exit 0
   else
-    read -p "Proceed with upgrade to $LATEST_VERSION? Router will reboot. (y/n): " CONFIRM
+    read -p "Proceed? (y/n): " C; [ "$C" = "y" ] || [ "$C" = "Y" ] || exit 0
   fi
-  
-  if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
-    echo "Upgrade cancelled by user."
-    exit 0
-  fi
-fi
+}
 
-# Perform upgrade
-echo "=== Starting Firmware Upgrade to $LATEST_VERSION ==="
-
-if [ "$FACTORY_UPGRADE" -eq 1 ]; then
-  echo "Using factory image with config wipe..."
-  echo "Router will reboot shortly..."
-  sysupgrade -F -n "$FIRMWARE_FILENAME" || { echo "Upgrade failed!"; exit 1; }
-else
-  echo "Using sysupgrade image (keeping configuration)..."
-  echo "Router will reboot shortly..."
-  sysupgrade "$FIRMWARE_FILENAME" || { echo "Upgrade failed!"; exit 1; }
-fi
+# Upgrade
+echo ""; echo "Upgrading... DO NOT UNPLUG!"; sleep 5
+[ "$FACTORY_UPGRADE" -eq 1 ] && sysupgrade -v -F -n "$FW" || sysupgrade -v "$FW"
 
