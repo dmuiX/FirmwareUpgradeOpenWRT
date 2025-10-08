@@ -1,6 +1,6 @@
 # AutomaticFirmwareUpgrade
 
-- Store it under /Overlays
+- Store it under /usr/local/bin so it should be preserved between upgrades
 - setup a cron job to regularly run it
 - Maybe once a week or sth. Openwrt Updates are not that common.
 
