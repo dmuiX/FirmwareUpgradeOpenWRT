@@ -19,7 +19,7 @@ echo "=== OpenWrt Automatic Firmware Upgrade Script ==="
 NEEDS_PACKAGES=0
 if ! opkg list-installed | grep -q openssl-util || \
    ! opkg list-installed | grep -q ca-certificates || \
-   ! opkg list-installed | grep -q cifs-utils || \
+   ! opkg list-installed | grep -q kmod-fs-cifs || \
    ! opkg list-installed | grep -q libustream-mbedtls; then
   NEEDS_PACKAGES=1
 fi
@@ -28,7 +28,7 @@ if [ "$NEEDS_PACKAGES" -eq 1 ]; then
   echo "Installing required packages..."
   opkg update || { echo "opkg update failed"; exit 1; }
   
-  opkg install openssl-util ca-certificates cifs-utils libustream-mbedtls || { echo "Package install failed"; exit 1; }
+  opkg install openssl-util ca-certificates kmod-fs-cifs libustream-mbedtls || { echo "Package install failed"; exit 1; }
 else
   echo "Required packages already installed."
 fi
