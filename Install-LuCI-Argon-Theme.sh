@@ -21,7 +21,7 @@ if ! opkg list-installed | grep -q luci-compat || ! opkg list-installed | grep -
 fi
 
 if ! opkg list-installed | grep -q luci-theme-argon; then
-  DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.4.3/luci-theme-argon-2.4.3-r20250722.ipk"
+  DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.3.2/luci-theme-argon_2.3.2-r20250207_all.ipk"
   
   read -p "Enter current LuCI Argon theme download link. Defaults to [${DEFAULT_THEME_LINK}]: " LUCI_ARGON_THEME_LINK
   LUCI_ARGON_THEME_LINK=${LUCI_ARGON_THEME_LINK:-$DEFAULT_THEME_LINK}
