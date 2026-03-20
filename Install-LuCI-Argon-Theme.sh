@@ -61,7 +61,7 @@ if ! pkg_installed luci-theme-argon; then
 
   wget -O "$LUCI_ARGON_THEME_FILENAME" "$LUCI_ARGON_THEME_LINK" || { echo "Theme download failed"; exit 1; }
   case "$LUCI_ARGON_THEME_FILENAME" in
-    *.apk) apk add --allow-untrusted "./$LUCI_ARGON_THEME_FILENAME" || { echo "Theme install failed"; rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1; } ;;
+    *.apk) apk add --allow-untrusted --no-deps "./$LUCI_ARGON_THEME_FILENAME" || { echo "Theme install failed"; rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1; } ;;
     *.ipk) install_ipk "$LUCI_ARGON_THEME_FILENAME" || { rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1; } ;;
     *) echo "Unknown package format: $LUCI_ARGON_THEME_FILENAME"; rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1 ;;
   esac
