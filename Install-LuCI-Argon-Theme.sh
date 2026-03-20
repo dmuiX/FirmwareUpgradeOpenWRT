@@ -33,7 +33,7 @@ install_ipk() {
 
 # Check if any package is missing before running apk update
 NEEDS_UPDATE=0
-for pkg in luci-compat luci-lib-ipkg luci-theme-argon; do
+for pkg in luci-theme-argon; do
   if ! pkg_installed "$pkg"; then
     NEEDS_UPDATE=1
     break
@@ -55,12 +55,6 @@ if [ "$NEEDS_UPDATE" -eq 1 ]; then
   fi
   echo "Updating package list..."
   apk update || { echo "apk update failed"; exit 1; }
-fi
-
-# Install LuCI dependencies via apk
-if ! pkg_installed luci-compat || ! pkg_installed luci-lib-ipkg; then
-  echo "Installing LuCI dependencies..."
-  apk add luci-compat luci-lib-ipkg || { echo "Failed to install dependencies"; exit 1; }
 fi
 
 # Install Argon theme (.ipk from GitHub)
