@@ -33,7 +33,7 @@ install_ipk() {
 
 # Check if any package is missing before running apk update
 NEEDS_UPDATE=0
-for pkg in luci-compat luci-lib-ipkg luci-theme-argon luci-app-argon-config; do
+for pkg in luci-compat luci-lib-ipkg luci-theme-argon; do
   if ! pkg_installed "$pkg"; then
     NEEDS_UPDATE=1
     break
@@ -69,26 +69,6 @@ if ! pkg_installed luci-theme-argon; then
   echo "LuCI Argon theme installed."
 else
   echo "LuCI Argon theme already installed."
-fi
-
-# Install Argon config app (.ipk from GitHub)
-if ! pkg_installed luci-app-argon-config; then
-  DEFAULT_ARGON_CONFIG_LINK="https://github.com/jerrykuku/luci-app-argon-config/releases/download/v0.9/luci-app-argon-config_0.9_all.ipk"
-
-  read -p "Argon config app download link [${DEFAULT_ARGON_CONFIG_LINK}]: " LUCI_APP_ARGON_CONFIG_LINK
-  LUCI_APP_ARGON_CONFIG_LINK=${LUCI_APP_ARGON_CONFIG_LINK:-$DEFAULT_ARGON_CONFIG_LINK}
-  LUCI_APP_ARGON_CONFIG_FILENAME=$(basename "$LUCI_APP_ARGON_CONFIG_LINK")
-
-  wget -O "$LUCI_APP_ARGON_CONFIG_FILENAME" "$LUCI_APP_ARGON_CONFIG_LINK" || { echo "App download failed"; exit 1; }
-  case "$LUCI_APP_ARGON_CONFIG_FILENAME" in
-    *.apk) apk add --allow-untrusted "./$LUCI_APP_ARGON_CONFIG_FILENAME" || { echo "App install failed"; rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1; } ;;
-    *.ipk) install_ipk "$LUCI_APP_ARGON_CONFIG_FILENAME" || { rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1; } ;;
-    *) echo "Unknown package format: $LUCI_APP_ARGON_CONFIG_FILENAME"; rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1 ;;
-  esac
-  rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"
-  echo "LuCI Argon config app installed."
-else
-  echo "LuCI Argon config app already installed."
 fi
 
 # Persistently set Argon as active theme
