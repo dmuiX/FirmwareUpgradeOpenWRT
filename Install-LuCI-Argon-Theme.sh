@@ -14,7 +14,7 @@ else
   FILE=$(basename "$LINK")
 
   wget -O "$FILE" "$LINK" || { echo "Download failed"; exit 1; }
-  apk add --allow-untrusted --no-deps "./$FILE" || { echo "Install failed"; rm -f "$FILE"; exit 1; }
+  apk add --allow-untrusted "./$FILE" || { echo "Install failed"; rm -f "$FILE"; exit 1; }
   rm -f "$FILE"
   echo "LuCI Argon theme installed."
 fi
