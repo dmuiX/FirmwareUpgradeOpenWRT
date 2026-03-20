@@ -53,14 +53,18 @@ fi
 
 # Install Argon theme (.ipk from GitHub)
 if ! pkg_installed luci-theme-argon; then
-  DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.3.2/luci-theme-argon_2.3.2-r20250207_all.ipk"
+  DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.4.3/luci-theme-argon-2.4.3-r20250722.apk"
 
   read -p "Argon theme download link [${DEFAULT_THEME_LINK}]: " LUCI_ARGON_THEME_LINK
   LUCI_ARGON_THEME_LINK=${LUCI_ARGON_THEME_LINK:-$DEFAULT_THEME_LINK}
   LUCI_ARGON_THEME_FILENAME=$(basename "$LUCI_ARGON_THEME_LINK")
 
   wget -O "$LUCI_ARGON_THEME_FILENAME" "$LUCI_ARGON_THEME_LINK" || { echo "Theme download failed"; exit 1; }
-  install_ipk "$LUCI_ARGON_THEME_FILENAME" || { rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1; }
+  case "$LUCI_ARGON_THEME_FILENAME" in
+    *.apk) apk add --allow-untrusted "./$LUCI_ARGON_THEME_FILENAME" || { echo "Theme install failed"; rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1; } ;;
+    *.ipk) install_ipk "$LUCI_ARGON_THEME_FILENAME" || { rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1; } ;;
+    *) echo "Unknown package format: $LUCI_ARGON_THEME_FILENAME"; rm -f "$LUCI_ARGON_THEME_FILENAME"; exit 1 ;;
+  esac
   rm -f "$LUCI_ARGON_THEME_FILENAME"
   echo "LuCI Argon theme installed."
 else
@@ -76,7 +80,11 @@ if ! pkg_installed luci-app-argon-config; then
   LUCI_APP_ARGON_CONFIG_FILENAME=$(basename "$LUCI_APP_ARGON_CONFIG_LINK")
 
   wget -O "$LUCI_APP_ARGON_CONFIG_FILENAME" "$LUCI_APP_ARGON_CONFIG_LINK" || { echo "App download failed"; exit 1; }
-  install_ipk "$LUCI_APP_ARGON_CONFIG_FILENAME" || { rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1; }
+  case "$LUCI_APP_ARGON_CONFIG_FILENAME" in
+    *.apk) apk add --allow-untrusted "./$LUCI_APP_ARGON_CONFIG_FILENAME" || { echo "App install failed"; rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1; } ;;
+    *.ipk) install_ipk "$LUCI_APP_ARGON_CONFIG_FILENAME" || { rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1; } ;;
+    *) echo "Unknown package format: $LUCI_APP_ARGON_CONFIG_FILENAME"; rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"; exit 1 ;;
+  esac
   rm -f "$LUCI_APP_ARGON_CONFIG_FILENAME"
   echo "LuCI Argon config app installed."
 else
