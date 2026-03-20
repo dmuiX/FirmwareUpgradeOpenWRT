@@ -31,31 +31,6 @@ install_ipk() {
   fi
 }
 
-# Check if any package is missing before running apk update
-NEEDS_UPDATE=0
-for pkg in luci-theme-argon; do
-  if ! pkg_installed "$pkg"; then
-    NEEDS_UPDATE=1
-    break
-  fi
-done
-
-if [ "$NEEDS_UPDATE" -eq 1 ]; then
-  # Safety check: verify repo kmod version matches running kernel to prevent downgrades
-  RUNNING_KERNEL=$(uname -r)
-  REPO_KERNEL=$(grep -o 'kmods/[^/]*' /etc/apk/repositories.d/distfeeds.list 2>/dev/null | head -1 | cut -d/ -f2)
-  if [ -n "$REPO_KERNEL" ] && ! echo "$REPO_KERNEL" | grep -q "^${RUNNING_KERNEL}-"; then
-    echo "WARNING: Running kernel ($RUNNING_KERNEL) does not match repo kmod version ($REPO_KERNEL)."
-    echo "Running apk update may cause package downgrades."
-    read -p "Continue anyway? [y/N]: " CONFIRM
-    case "$CONFIRM" in
-      [yY]) ;;
-      *) echo "Aborted."; exit 1 ;;
-    esac
-  fi
-  echo "Updating package list..."
-  apk update || { echo "apk update failed"; exit 1; }
-fi
 
 # Install Argon theme (.ipk from GitHub)
 if ! pkg_installed luci-theme-argon; then
