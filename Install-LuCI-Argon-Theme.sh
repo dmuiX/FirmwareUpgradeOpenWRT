@@ -10,7 +10,7 @@ DEFAULT_ARGON_CONFIG_LINK="https://github.com/jerrykuku/luci-app-argon-config/re
 #if apk info -e luci-theme-argon 2>/dev/null; then # must ask for version
 #  echo "LuCI Argon theme already installed."
 #else
-read -p "Argon theme download link [${DEFAULT_THEME_LINK}]: LINK"
+read -p "Argon theme download link [${DEFAULT_THEME_LINK}]"
 LINK=${LINK:-$DEFAULT_THEME_LINK}
 FILE=$(basename "$LINK")
 
@@ -27,7 +27,7 @@ echo "LuCI Argon theme installed."
 #if apk info -e luci-app-argon-config; 2>/dev/null; then #same version is missing
 #  echo "LuCI Argon config already installed."
 #else
-read -p "Argon config download link [DEFAULT_ARGON_CONFIG_LINK]: LINK"
+read -p "Argon config download link [DEFAULT_ARGON_CONFIG_LINK]"
 LINK=${LINK:-$DEFAULT_ARGON_CONFIG_LINK}
 FILE=$(basename "$LINK")
 
