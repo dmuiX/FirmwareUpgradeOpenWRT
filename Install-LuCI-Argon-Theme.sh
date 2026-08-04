@@ -27,7 +27,7 @@ echo "LuCI Argon theme installed."
 #if apk info -e luci-app-argon-config; 2>/dev/null; then #same version is missing
 #  echo "LuCI Argon config already installed."
 #else
-read -p "Argon config download link [DEFAULT_ARGON_CONFIG_LINK]"
+read -p "Argon config download link [$DEFAULT_ARGON_CONFIG_LINK]"
 LINK=${LINK:-$DEFAULT_ARGON_CONFIG_LINK}
 FILE=$(basename "$LINK")
 
