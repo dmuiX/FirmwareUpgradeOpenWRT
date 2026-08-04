@@ -4,7 +4,7 @@ set -e
 cd /tmp
 
 DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.4.6/luci-theme-argon-2.4.6-r1.apk"
-DEFAULT_ARGON_CONFIG_LINK="https://github.com/jerrykuku/luci-app-argon-config/releases/download/v2.4.6/luci-app-argon-config-2.4.6-r1.apk"
+DEFAULT_ARGON_CONFIG_LINK="https://github.com/jerrykuku/luci-app-argon/releases/download/v2.4.6/luci-app-argon-config-2.4.6-r1.apk"
 
 # Skip if already installed
 #if apk info -e luci-theme-argon 2>/dev/null; then # must ask for version
