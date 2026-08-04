@@ -28,12 +28,12 @@ echo "LuCI Argon theme installed."
 #  echo "LuCI Argon config already installed."
 #else
 read -p "Argon config download link [$DEFAULT_ARGON_CONFIG_LINK]"
-LINK=${LINK:-$DEFAULT_ARGON_CONFIG_LINK}
-FILE=$(basename "$LINK")
+CONFIG_LINK=${CONFIG_LINK:-$DEFAULT_ARGON_CONFIG_LINK}
+CONFIG_FILE=$(basename "$CONFIG_LINK")
 
-wget -O "$FILE" "$LINK" || { echo "Download failed"; exit 1; }
-apk add --allow-untrusted "./$FILE" || true
-rm -f "$FILE"
+wget -O "$CONFIG_FILE" "$CONFIG_LINK" || { echo "Download failed"; exit 1; }
+apk add --allow-untrusted "./$CONFIG_FILE" || true
+rm -f "$CONFIG_FILE"
 if ! apk info -e luci-app-argon-config 2>/dev/null; then
   echo "Install failed"; exit 1
 fi
