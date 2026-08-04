@@ -4,7 +4,7 @@ set -e
 cd /tmp
 
 DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.4.6/luci-theme-argon-2.4.6-r1.apk"
-CONFIG_LINK="luci-app-argon-config-2.4.6-r1.apk"
+DEFAULT_ARGON_CONFIG_LINK="https://github.com/jerrykuku/luci-app-argon-config/releases/download/v2.4.6/luci-app-argon-config-2.4.6-r1.apk"
 
 # Skip if already installed
 if apk info -e luci-theme-argon 2>/dev/null; then
@@ -21,6 +21,23 @@ else
     echo "Install failed"; exit 1
   fi
   echo "LuCI Argon theme installed."
+fi
+
+# Install Argon Theme Config App
+if apk info -e luci-app-argon-config; 2>/dev/null; then
+  echo "LuCI Argon config already installed."
+else
+  read -p "Argon config download link [DEFAULT_ARGON_CONFIG_LINK]: " LINK
+  LINK=${LINK:-$DEFAULT_ARGON_CONFIG_LINK}
+  FILE=$(basename "$LINK")
+
+  wget -O "$FILE" "$LINK" || { echo "Download failed"; exit 1; }
+  apk add --allow-untrusted "./$FILE" || true
+  rm -f "$FILE"
+  if ! apk info -e luci-app-argon-config 2>/dev/null; then
+    echo "Install failed"; exit 1
+  fi
+  echo "LuCI Argon config app installed."
 fi
 
 # Set Argon as active theme
