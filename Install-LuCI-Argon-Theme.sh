@@ -6,7 +6,7 @@ cd /tmp
 DEFAULT_THEME_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.4.6/luci-theme-argon-2.4.6-r1.apk"
 DEFAULT_ARGON_CONFIG_LINK="https://github.com/jerrykuku/luci-theme-argon/releases/download/v2.4.6/luci-app-argon-config-2.4.6-r1.apk"
 
-read -p "Argon theme download link [${DEFAULT_THEME_LINK}]"
+read -r -p "Argon theme download link [${DEFAULT_THEME_LINK}]: " LINK
 LINK=${LINK:-$DEFAULT_THEME_LINK}
 FILE=$(basename "$LINK")
 
@@ -18,7 +18,7 @@ if ! apk info -e luci-theme-argon 2>/dev/null; then
 fi
 echo "LuCI Argon theme installed."
 
-read -p "Argon config download link [$DEFAULT_ARGON_CONFIG_LINK]"
+read -r -p "Argon config download link [${DEFAULT_ARGON_CONFIG_LINK}]: " CONFIG_LINK
 CONFIG_LINK=${CONFIG_LINK:-$DEFAULT_ARGON_CONFIG_LINK}
 CONFIG_FILE=$(basename "$CONFIG_LINK")
 
