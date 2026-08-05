@@ -18,3 +18,5 @@ chore: add contribution guidelines
 ```
 
 Keep the subject in English, lowercase after the type, and do not end it with a period.
+
+## Shell scripting
