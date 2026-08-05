@@ -10,25 +10,30 @@ read -r -p "Argon theme download link [${DEFAULT_THEME_LINK}]: " LINK
 LINK=${LINK:-$DEFAULT_THEME_LINK}
 FILE=$(basename "$LINK")
 
-wget -O "$FILE" "$LINK" || { echo "Download failed"; exit 1; }
-apk add --allow-untrusted "./$FILE" || true
-rm -f "$FILE"
-if ! apk info -e luci-theme-argon 2>/dev/null; then
-  echo "Install failed"; exit 1
-fi
-echo "LuCI Argon theme installed."
-
 read -r -p "Argon config download link [${DEFAULT_ARGON_CONFIG_LINK}]: " CONFIG_LINK
 CONFIG_LINK=${CONFIG_LINK:-$DEFAULT_ARGON_CONFIG_LINK}
 CONFIG_FILE=$(basename "$CONFIG_LINK")
 
-wget -O "$CONFIG_FILE" "$CONFIG_LINK" || { echo "Download failed"; exit 1; }
-apk add --allow-untrusted "./$CONFIG_FILE" || true
-rm -f "$CONFIG_FILE"
-if ! apk info -e luci-app-argon-config 2>/dev/null; then
-  echo "Install failed"; exit 1
+echo "Downloading Argon theme..."
+wget -O "$FILE" "$LINK" || { echo "Theme download failed"; exit 1; }
+
+echo "Downloading Argon config app..."
+wget -O "$CONFIG_FILE" "$CONFIG_LINK" || { echo "Config app download failed"; exit 1; }
+
+# The theme package depends on luci-app-argon-config.  Both local APKs must
+# therefore be supplied in the same apk transaction.
+if ! apk add --allow-untrusted "./$FILE" "./$CONFIG_FILE"; then
+  echo "Install failed"
+  exit 1
 fi
-echo "LuCI Argon config app installed."
+rm -f "$FILE" "$CONFIG_FILE"
+
+if ! apk info -e luci-theme-argon >/dev/null 2>&1 || \
+   ! apk info -e luci-app-argon-config >/dev/null 2>&1; then
+  echo "Install failed: one or more Argon packages are missing"
+  exit 1
+fi
+echo "LuCI Argon theme and config app installed."
 
 # Set Argon as active theme
 if [ "$(uci get luci.main.mediaurlbase 2>/dev/null)" != "/luci-static/argon" ]; then
