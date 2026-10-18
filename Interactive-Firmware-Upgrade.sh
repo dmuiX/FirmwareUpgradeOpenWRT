@@ -59,7 +59,9 @@ sysupgrade -T -f $BACKUPFILE $FILENAME 2>&1 > error.log
 
 if [ $? -eq 0 ]; then
   echo "Upgrade test passed, proceeding with upgrade..."
-  sysupgrade -v -c $FILENAME         # keep config and verbose output
+  # Preserve normal conffiles and the explicit sysupgrade.conf allowlist only.
+  # -c would also restore obsolete release/feed metadata from all changed /etc.
+  sysupgrade -v "$FILENAME"
 else
   echo "Upgrade test failed, aborting upgrade!"
   cat error.log

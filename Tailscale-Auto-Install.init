@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+
+# Values and callbacks are consumed by /etc/rc.common.
+# shellcheck disable=SC2034
+USE_PROCD=1
+# shellcheck disable=SC2034
+START=99
+# shellcheck disable=SC2034
+STOP=10
+
+INSTALLER=/root/FirmwareUpgradeOpenWRT/Ensure-Tailscale.sh
+
+start_service() {
+  if [ ! -x "$INSTALLER" ]; then
+    logger -t tailscale-auto-install "Installer missing or not executable."
+    return 1
+  fi
+  procd_open_instance
+  procd_set_param command "$INSTALLER" --non-interactive
+  procd_set_param stdout 1
+  procd_set_param stderr 1
+  # One attempt per boot/WAN event, not an unbounded package-install crash loop.
+  procd_close_instance
+}
+
+service_triggers() {
+  # Do not restart/kill an active apk transaction when WAN flaps.
+  procd_add_interface_trigger "interface.up" "wan" /etc/init.d/tailscale-auto-install start
+  procd_add_interface_trigger "interface.up" "wan6" /etc/init.d/tailscale-auto-install start
+}

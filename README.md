@@ -65,6 +65,23 @@ cd /tmp \
 
 ---
 
+## 🔄 Restore Tailscale after firmware upgrades
+
+An APK-based OpenWrt bootstrap is available in
+[Tailscale-Auto-Install.md](Tailscale-Auto-Install.md). Like the Argon bootstrap,
+it can restore packages after boot/WAN-up, but first verifies kernel ABI,
+firmware metadata and distribution feeds. It preserves the existing Tailscale
+identity and does not perform an automatic login/reset.
+
+**Enabled and live-verified on the repaired router:** firmware/package metadata
+and the sysupgrade preservation policy have been corrected. The client is
+connected, a real peer ping passed, and repeated bootstrap execution leaves the
+running VPN process intact. Signed HTTPS mirror fallback is included. See the
+linked compatibility checks before using this on another installation; do not
+force-install kernel modules. No firmware flash/reboot was used for verification.
+
+---
+
 ## 📝 Notes
 
 - Default package links point to the latest known releases — you'll be prompted to confirm or override them
