@@ -5,9 +5,6 @@
 USE_PROCD=1
 # shellcheck disable=SC2034
 START=99
-# shellcheck disable=SC2034
-STOP=10
-
 INSTALLER=/root/FirmwareUpgradeOpenWRT/Ensure-Tailscale.sh
 
 start_service() {
@@ -25,6 +22,7 @@ start_service() {
 
 service_triggers() {
   # Do not restart/kill an active apk transaction when WAN flaps.
+  procd_add_interface_trigger "interface.up" "lan" /etc/init.d/tailscale-auto-install start
   procd_add_interface_trigger "interface.up" "wan" /etc/init.d/tailscale-auto-install start
   procd_add_interface_trigger "interface.up" "wan6" /etc/init.d/tailscale-auto-install start
 }

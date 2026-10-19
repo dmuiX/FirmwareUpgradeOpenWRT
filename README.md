@@ -1,89 +1,46 @@
 # 🛠️ FirmwareUpgradeOpenWRT
 
-Scripts for upgrading OpenWRT firmware and setting up the LuCI Argon theme.
+Scripts for upgrading OpenWrt firmware and restoring selected packages after sysupgrade.
 
-> ⚠️ **OpenWRT 25.10+** uses `apk` as package manager (replaces `opkg`). The scripts here support both.
+> The Argon and Tailscale restoration scripts require APK-based OpenWrt with a coherent immutable `/rom` baseline. They do not support `opkg`.
 
----
+## Firmware upgrade
 
-## 📦 Setup on the Router
-
-First, install the required tools:
+`Interactive-Firmware-Upgrade.sh` prompts for a sysupgrade image and its checksum file. Images are available from <https://downloads.openwrt.org/releases/>.
 
 ```sh
-apk add git git-http
+cd /tmp
+wget https://raw.githubusercontent.com/dmuiX/FirmwareUpgradeOpenWRT/master/Interactive-Firmware-Upgrade.sh -O upgrade.sh
+chmod +x upgrade.sh
+./upgrade.sh
 ```
 
-Then clone the repo:
+## LuCI Argon restoration
+
+`Install-LuCI-Argon-Theme.sh`:
+
+- checks the running kernel, installed kernel metadata, release metadata, and feeds against `/rom`;
+- leaves an installed `luci-theme-argon` package untouched;
+- otherwise downloads the pinned 3.0.0-r2 APK and verifies its SHA-256 checksum;
+- simulates the add and continues only when the sole action is installing that package;
+- performs a separate add under the shared restoration lock; and
+- activates Argon, restarting `uhttpd` only when the configured theme changes.
+
+It is a restore script, not an updater. It never upgrades, downgrades, reinstalls, replaces, or removes an installed package.
 
 ```sh
-cd /tmp && git clone https://github.com/dmuiX/FirmwareUpgradeOpenWRT
+cd /root/FirmwareUpgradeOpenWRT
+./Install-LuCI-Argon-Theme.sh
 ```
 
-Or run the scripts directly without cloning (see below).
+`Install-Argon-Auto-Update.sh` installs the procd one-shot for boot and LAN/WAN-up restoration.
 
----
+## Tailscale restoration
 
-## 🚀 Firmware Upgrade
+See [Tailscale-Auto-Install.md](Tailscale-Auto-Install.md). The bootstrap restores only missing `tailscale` and `kmod-tun` packages plus required missing dependencies. It preserves the existing identity and preferences and never logs in, logs out, or resets Tailscale.
 
-Runs an interactive sysupgrade — asks for a download link to a `sysupgrade.bin` and the matching `sha256sums` file.
+## Notes
 
-**Run directly on the router:**
-
-```sh
-cd /tmp \
-  && wget https://raw.githubusercontent.com/dmuiX/FirmwareUpgradeOpenWRT/master/Interactive-Firmware-Upgrade.sh -O upgrade.sh \
-  && chmod +x upgrade.sh \
-  && ./upgrade.sh
-```
-
-Sysupgrade images can be found at:
-https://downloads.openwrt.org/releases/
-
----
-
-## 🎨 Install LuCI Argon Theme
-
-Installs the [Argon theme](https://github.com/jerrykuku/luci-theme-argon) for LuCI and sets it as the default.
-
-**What it does:**
-- Updates the package list via `apk`
-- Installs `luci-compat` and `luci-lib-ipkg` from the OpenWRT repo
-- Downloads and installs `luci-theme-argon` and `luci-app-argon-config` from GitHub
-- Installs `.ipk` packages with `--allow-untrusted` to avoid signature warnings
-- Falls back to manual tar extraction if `opkg` is not available
-- Sets Argon as the active theme via `uci` and restarts `uhttpd`
-
-**Run directly on the router:**
-
-```sh
-cd /tmp \
-  && wget https://raw.githubusercontent.com/dmuiX/FirmwareUpgradeOpenWRT/master/Install-LuCI-Argon-Theme.sh -O theme.sh \
-  && chmod +x theme.sh \
-  && ./theme.sh
-```
-
----
-
-## 🔄 Restore Tailscale after firmware upgrades
-
-An APK-based OpenWrt bootstrap is available in
-[Tailscale-Auto-Install.md](Tailscale-Auto-Install.md). Like the Argon bootstrap,
-it can restore packages after boot/WAN-up, but first verifies kernel ABI,
-firmware metadata and distribution feeds. It preserves the existing Tailscale
-identity and does not perform an automatic login/reset.
-
-**Enabled and live-verified on the repaired router:** firmware/package metadata
-and the sysupgrade preservation policy have been corrected. The client is
-connected, a real peer ping passed, and repeated bootstrap execution leaves the
-running VPN process intact. Signed HTTPS mirror fallback is included. See the
-linked compatibility checks before using this on another installation; do not
-force-install kernel modules. No firmware flash/reboot was used for verification.
-
----
-
-## 📝 Notes
-
-- Default package links point to the latest known releases — you'll be prompted to confirm or override them
-- Works on **OpenWRT 25.10+** (apk-based) as well as older versions with opkg
-- The `luci-app-sqm` package is **not** installed automatically — add it separately if needed
+- The two restore scripts use `/var/lock/post-sysupgrade-package-install.lock` to serialize their presence check, simulation, and add operations.
+- The lock coordinates these scripts only. Do not run other package administration concurrently.
+- `luci-app-sqm` is not installed automatically.
