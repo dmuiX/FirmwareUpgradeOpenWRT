@@ -67,6 +67,9 @@ else
   module_present && fail "TUN module exists without package metadata."
   missing="${missing:+$missing }kmod-tun"
 fi
+if ! apk info -e luci-app-tailscale-community >/dev/null 2>&1; then
+  missing="${missing:+$missing }luci-app-tailscale-community"
+fi
 if [ -n "$missing" ]; then
   apk --wait 120 --keys-dir "$ROM_KEYS" --repositories-file "$ROM_REPOSITORIES" update || fail "Package index update failed."
   # No other package-management process runs on this router. The shared lock
@@ -86,6 +89,7 @@ fi
 [ "$(kernel_version)" = "$rom_kernel" ] || fail "Kernel package changed unexpectedly."
 apk info -e tailscale >/dev/null 2>&1 || fail "Tailscale package is missing."
 apk info -e kmod-tun >/dev/null 2>&1 || fail "kmod-tun package is missing."
+apk info -e luci-app-tailscale-community >/dev/null 2>&1 || fail "Tailscale LuCI package is missing."
 command -v tailscaled >/dev/null 2>&1 || fail "tailscaled is unavailable."
 module_present || fail "TUN module is unavailable."
 modprobe tun || fail "Kernel rejected the TUN module."

@@ -18,7 +18,7 @@ Before package operations, the script requires:
 
 `--check` performs only these read-only checks.
 
-Under `/var/lock/post-sysupgrade-package-install.lock`, the script checks `tailscale` and `kmod-tun` independently. Installed packages are never changed. Missing packages and required missing dependencies are requested from the `/rom` repositories and keys. The script first runs `apk add --simulate`, accepts only `Installing` progress actions with every requested package present, and then runs a separate `apk add`.
+Under `/var/lock/post-sysupgrade-package-install.lock`, the script checks `tailscale`, `kmod-tun`, and `luci-app-tailscale-community` independently. Installed packages are never changed. Missing packages and required missing dependencies are requested from the `/rom` repositories and keys. The script first runs `apk add --simulate`, accepts only `Installing` progress actions with every requested package present, and then runs a separate `apk add`.
 
 Argon restoration uses the same mkdir lock. This serializes the two restore scripts from their package-presence checks through installation. It does not lock out unrelated package-manager clients, so do not run package or firmware administration concurrently.
 

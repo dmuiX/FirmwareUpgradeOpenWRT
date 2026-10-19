@@ -37,7 +37,7 @@ cd /root/FirmwareUpgradeOpenWRT
 
 ## Tailscale restoration
 
-See [Tailscale-Auto-Install.md](Tailscale-Auto-Install.md). The bootstrap restores only missing `tailscale` and `kmod-tun` packages plus required missing dependencies. It preserves the existing identity and preferences and never logs in, logs out, or resets Tailscale.
+See [Tailscale-Auto-Install.md](Tailscale-Auto-Install.md). The bootstrap restores only missing `tailscale`, `kmod-tun`, and `luci-app-tailscale-community` packages plus required missing dependencies. It preserves the existing identity and preferences and never logs in, logs out, or resets Tailscale.
 
 ## Notes
 

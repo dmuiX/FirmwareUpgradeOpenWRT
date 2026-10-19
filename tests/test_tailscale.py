@@ -59,7 +59,11 @@ elif command == "update":
 elif command == "add":
     requested = a[a.index("add") + 1:]
     requested = [item for item in requested if not item.startswith("-")]
-    versions = {"tailscale": "1.80.3-r1", "kmod-tun": "6.12.112-r1"}
+    versions = {
+        "tailscale": "1.80.3-r1",
+        "kmod-tun": "6.12.112-r1",
+        "luci-app-tailscale-community": "26.288.56989~75a306d",
+    }
     plan = os.environ.get("TEST_PLAN")
     if plan is None:
         plan = "\n".join(f"({index:3d}/{len(requested)}) Installing {package} ({versions[package]})" for index, package in enumerate(requested, 1))
@@ -169,6 +173,7 @@ if sys.argv[1:] == ["restart"]: (root / "running").touch()
     def test_existing_packages_are_untouched_and_second_run_is_idempotent(self):
         self.mark_present("tailscale")
         self.mark_present("kmod-tun")
+        self.mark_present("luci-app-tailscale-community")
         (self.root / "running").touch()
         for _ in range(2):
             result = self.invoke()
@@ -178,6 +183,7 @@ if sys.argv[1:] == ["restart"]: (root / "running").touch()
 
     def test_only_missing_package_is_simulated_then_added(self):
         self.mark_present("tailscale")
+        self.mark_present("luci-app-tailscale-community")
         result = self.invoke()
         self.assertEqual(result.returncode, 0, result.stderr)
         adds = self.adds()
@@ -187,6 +193,15 @@ if sys.argv[1:] == ["restart"]: (root / "running").touch()
         for event in adds:
             requested = [item for item in event[event.index("add") + 1:] if not item.startswith("-")]
             self.assertEqual(requested, ["kmod-tun"])
+
+    def test_only_missing_luci_app_is_simulated_then_added(self):
+        self.mark_present("tailscale")
+        self.mark_present("kmod-tun")
+        result = self.invoke()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for event in self.adds():
+            requested = [item for item in event[event.index("add") + 1:] if not item.startswith("-")]
+            self.assertEqual(requested, ["luci-app-tailscale-community"])
 
     def test_any_non_installing_simulated_action_is_refused(self):
         for action in ("Upgrading", "Downgrading", "Reinstalling", "Purging"):
@@ -212,6 +227,7 @@ if sys.argv[1:] == ["restart"]: (root / "running").touch()
     def test_identity_is_retained_and_login_is_never_created_or_reset(self):
         self.mark_present("tailscale")
         self.mark_present("kmod-tun")
+        self.mark_present("luci-app-tailscale-community")
         self.env["TEST_BACKEND"] = "NeedsLogin"
         result = self.invoke()
         self.assertNotEqual(result.returncode, 0)
